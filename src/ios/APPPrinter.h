@@ -21,12 +21,10 @@
 
 #import <Foundation/Foundation.h>
 #import <Cordova/CDVPlugin.h>
+#import <WebKit/WebKit.h>
 
 
-@interface APPPrinter : CDVPlugin <UIWebViewDelegate>
-
-// this is used to cache the uiprinter making repeated prints faster
-@property (nonatomic) UIPrinter *previousPrinter;
+@interface APPPrinter : CDVPlugin
 
 // Find out whether printing is supported on this platform
 - (void) check:(CDVInvokedUrlCommand*)command;
