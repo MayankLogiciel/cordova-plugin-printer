@@ -105,16 +105,11 @@
 }
 
 #pragma mark -
-#pragma mark UIWebViewDelegate
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
+       decisionHandler(WKNavigationActionPolicyAllow);
+}
 
-/**
- * Sent after a web view finishes loading a frame.
- *
- * @param webView
- *      The web view has finished loading.
- */
-- (void) webViewDidFinishLoad:(UIWebView *)webView
-{
+- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation {
     UIPrintInteractionController* controller = [self printController];
     NSString* printerId = [self.settings objectForKey:@"printerId"];
 
@@ -167,7 +162,7 @@
                                  messageAsBool:ok];
 
              [self.commandDelegate sendPluginResult:pluginResult
-                                         callbackId:_callbackId];
+                                         callbackId:self->_callbackId];
          }];
     }
     else {
@@ -178,7 +173,7 @@
                                  messageAsBool:ok];
 
              [self.commandDelegate sendPluginResult:pluginResult
-                                         callbackId:_callbackId];
+                                         callbackId:self->_callbackId];
          }];
     }
 }
@@ -195,15 +190,8 @@
                printer:(NSString*)printerId
 {
     NSURL* url         = [NSURL URLWithString:printerId];
-    
-    // check to see if we have previously created this printer to reduce printing/"contacting" time
-    if(self.previousPrinter == nil || ![[[self.previousPrinter URL] absoluteString] isEqualToString: printerId]) {
-        self.previousPrinter = [UIPrinter printerWithURL:url];
-    }
-    
-    UIPrinter* printer = self.previousPrinter;
-    
-    
+    UIPrinter* printer = [UIPrinter printerWithURL:url];
+
     [controller printToPrinter:printer completionHandler:
      ^(UIPrintInteractionController *ctrl, BOOL ok, NSError *e) {
          CDVPluginResult* pluginResult =
@@ -211,7 +199,7 @@
                              messageAsBool:ok];
 
          [self.commandDelegate sendPluginResult:pluginResult
-                                     callbackId:_callbackId];
+                                     callbackId:self->_callbackId];
      }];
 }
 
@@ -342,13 +330,18 @@
  */
 - (void) loadContent:(NSString*)content intoPrintController:(UIPrintInteractionController*)controller
 {
-    UIWebView* page                 = [[UIWebView alloc] init];
+    NSArray* bounds = [self.settings objectForKey:@"bounds"];
+    CGRect rect     = [self convertIntoRect:bounds];
+    
+    WKWebViewConfiguration *theConfiguration = [[WKWebViewConfiguration alloc] init];
+    WKWebView *page = [[WKWebView alloc] initWithFrame:rect configuration:theConfiguration];
+
     UIPrintPageRenderer* renderer   = [[UIPrintPageRenderer alloc] init];
     UIViewPrintFormatter* formatter = [page viewPrintFormatter];
 
     [renderer addPrintFormatter:formatter startingAtPageAtIndex:0];
 
-    page.delegate = self;
+    page.navigationDelegate = self;
 
     if ([NSURL URLWithString:content]) {
         NSURL *url = [NSURL URLWithString:content];
